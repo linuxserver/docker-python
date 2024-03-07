@@ -91,6 +91,7 @@ RUN \
     \( \
         -type d -a \( -name test -o -name tests \) \
     \) -exec rm -rf '{}' + && \
+  sed -i 's|pythoncompiled|usr/local|' /pythoncompiled/bin/pip /pythoncompiled/bin/pip* /pythoncompiled/bin/wheel && \
   echo "**** cleanup ****" && \
   apk del --purge \
     build-dependencies && \
