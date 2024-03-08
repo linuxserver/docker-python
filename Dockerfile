@@ -70,6 +70,11 @@ RUN \
     CFLAGS="-fno-semantic-interposition -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free" \
     EXTRA_CFLAGS="-DTHREAD_STACK_SIZE=0x100000" && \
   make install && \
+  find /pythoncompiled -type f -executable -not \( -name '*tkinter*' \) -exec scanelf --needed --nobanner --format '%n#p' '{}' ';' \
+    | tr ',' '\n' \
+    | sort -u \
+    | awk 'system("[ -e /pythoncompiled/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
+    | xargs -rt echo > /pythoncompiled/python-deps.txt && \
   find /pythoncompiled -depth \
     \( \
       -type d -a \( -name test -o -name tests \) \
@@ -89,7 +94,7 @@ RUN \
     pip && \
   find /pythoncompiled -depth \
     \( \
-        -type d -a \( -name test -o -name tests \) \
+      -type d -a \( -name test -o -name tests \) \
     \) -exec rm -rf '{}' + && \
   sed -i 's|pythoncompiled|usr/local|' /pythoncompiled/bin/pip /pythoncompiled/bin/pip* /pythoncompiled/bin/wheel && \
   echo "**** cleanup ****" && \
