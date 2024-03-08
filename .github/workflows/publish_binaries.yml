@@ -1,0 +1,35 @@
+name: Publish Binaries
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  publish-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve and upload artifacts
+        run: |
+          mkdir -p ./artifacts/amd64 ./artifacts/arm64
+          docker create --name amd64 ghcr.io/linuxserver/python:amd64-${{ github.event.release.tag_name }} blah
+          docker cp amd64:/usr/local/. ./artifacts/amd64/
+          tar -czvf python-amd64.tar.gz -C ./artifacts/amd64/ .
+          echo "**** Uploading amd64 tarball ****"
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            "https://uploads.github.com/repos/linuxserver/docker-python/releases/${{ github.event.release.id }}/assets?name=python-amd64.tar.gz" \
+            --data-binary "@python-amd64.tar.gz"
+          docker create --name arm64 ghcr.io/linuxserver/python:arm64v8-${{ github.event.release.tag_name }} blah
+          docker cp arm64:/usr/local/. ./artifacts/arm64/
+          tar -czvf python-arm64.tar.gz -C ./artifacts/arm64/ .
+          echo "**** Uploading arm64 tarball ****"
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            "https://uploads.github.com/repos/linuxserver/docker-python/releases/${{ github.event.release.id }}/assets?name=python-arm64.tar.gz" \
+            --data-binary "@python-arm64.tar.gz"
+
