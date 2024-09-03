@@ -17,6 +17,8 @@ pipeline {
     GITLAB_TOKEN=credentials('b6f0f1dd-6952-4cf6-95d1-9c06380283f0')
     GITLAB_NAMESPACE=credentials('gitlab-namespace-id')
     DOCKERHUB_TOKEN=credentials('docker-hub-ci-pat')
+    QUAYIO_API_TOKEN=credentials('quayio-repo-api-token')
+    GIT_SIGNING_KEY=credentials('484fbca6-9a4f-455e-b9e3-97ac98785f5f')
     JSON_URL = 'https://endoflife.date/api/python.json'
     JSON_PATH = '.[0].latest'
     BUILD_VERSION_ARG = 'PYTHON_VERSION'
@@ -38,9 +40,23 @@ pipeline {
     CI_WEBPATH=''
   }
   stages {
+    stage("Set git config"){
+      steps{
+        sh '''#!/bin/bash
+              cat ${GIT_SIGNING_KEY} > /config/.ssh/id_sign
+              chmod 600 /config/.ssh/id_sign
+              ssh-keygen -y -f /config/.ssh/id_sign > /config/.ssh/id_sign.pub
+              echo "Using $(ssh-keygen -lf /config/.ssh/id_sign) to sign commits"
+              git config --global gpg.format ssh
+              git config --global user.signingkey /config/.ssh/id_sign
+              git config --global commit.gpgsign true
+        '''
+      }
+    }
     // Setup all the basic environment variables needed for the build
     stage("Set ENV Variables base"){
       steps{
+        echo "Running on node: ${NODE_NAME}"
         sh '''#! /bin/bash
               containers=$(docker ps -aq)
               if [[ -n "${containers}" ]]; then
@@ -157,10 +173,10 @@ pipeline {
         }
       }
     }
-    // If this is a main build use live docker endpoints
+    // If this is a alpine319 build use live docker endpoints
     stage("Set ENV live build"){
       when {
-        branch "main"
+        branch "alpine319"
         environment name: 'CHANGE_ID', value: ''
       }
       steps {
@@ -183,7 +199,7 @@ pipeline {
     // If this is a dev build use dev docker endpoints
     stage("Set ENV dev build"){
       when {
-        not {branch "main"}
+        not {branch "alpine319"}
         environment name: 'CHANGE_ID', value: ''
       }
       steps {
@@ -259,7 +275,7 @@ pipeline {
     // Use helper containers to render templated files
     stage('Update-Templates') {
       when {
-        branch "main"
+        branch "alpine319"
         environment name: 'CHANGE_ID', value: ''
         expression {
           env.CONTAINER_NAME != null
@@ -271,24 +287,24 @@ pipeline {
               TEMPDIR=$(mktemp -d)
               docker pull ghcr.io/linuxserver/jenkins-builder:latest
               # Cloned repo paths for templating:
-              # ${TEMPDIR}/docker-${CONTAINER_NAME}: Cloned branch main of ${LS_USER}/${LS_REPO} for running the jenkins builder on
-              # ${TEMPDIR}/repo/${LS_REPO}: Cloned branch main of ${LS_USER}/${LS_REPO} for commiting various templated file changes and pushing back to Github
+              # ${TEMPDIR}/docker-${CONTAINER_NAME}: Cloned branch alpine319 of ${LS_USER}/${LS_REPO} for running the jenkins builder on
+              # ${TEMPDIR}/repo/${LS_REPO}: Cloned branch alpine319 of ${LS_USER}/${LS_REPO} for commiting various templated file changes and pushing back to Github
               # ${TEMPDIR}/docs/docker-documentation: Cloned docs repo for pushing docs updates to Github
               # ${TEMPDIR}/unraid/docker-templates: Cloned docker-templates repo to check for logos
               # ${TEMPDIR}/unraid/templates: Cloned templates repo for commiting unraid template changes and pushing back to Github
-              git clone --branch main --depth 1 https://github.com/${LS_USER}/${LS_REPO}.git ${TEMPDIR}/docker-${CONTAINER_NAME}
+              git clone --branch alpine319 --depth 1 https://github.com/${LS_USER}/${LS_REPO}.git ${TEMPDIR}/docker-${CONTAINER_NAME}
               docker run --rm -v ${TEMPDIR}/docker-${CONTAINER_NAME}:/tmp -e LOCAL=true -e PUID=$(id -u) -e PGID=$(id -g) ghcr.io/linuxserver/jenkins-builder:latest 
               echo "Starting Stage 1 - Jenkinsfile update"
               if [[ "$(md5sum Jenkinsfile | awk '{ print $1 }')" != "$(md5sum ${TEMPDIR}/docker-${CONTAINER_NAME}/Jenkinsfile | awk '{ print $1 }')" ]]; then
                 mkdir -p ${TEMPDIR}/repo
                 git clone https://github.com/${LS_USER}/${LS_REPO}.git ${TEMPDIR}/repo/${LS_REPO}
                 cd ${TEMPDIR}/repo/${LS_REPO}
-                git checkout -f main
+                git checkout -f alpine319
                 cp ${TEMPDIR}/docker-${CONTAINER_NAME}/Jenkinsfile ${TEMPDIR}/repo/${LS_REPO}/
                 git add Jenkinsfile
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
-                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
+                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
+                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Updating Jenkinsfile and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -307,13 +323,13 @@ pipeline {
                 mkdir -p ${TEMPDIR}/repo
                 git clone https://github.com/${LS_USER}/${LS_REPO}.git ${TEMPDIR}/repo/${LS_REPO}
                 cd ${TEMPDIR}/repo/${LS_REPO}
-                git checkout -f main
+                git checkout -f alpine319
                 for i in ${TEMPLATES_TO_DELETE}; do
                   git rm "${i}"
                 done
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
-                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
+                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
+                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Deleting old/deprecated templates and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -329,7 +345,7 @@ pipeline {
                 mkdir -p ${TEMPDIR}/repo
                 git clone https://github.com/${LS_USER}/${LS_REPO}.git ${TEMPDIR}/repo/${LS_REPO}
                 cd ${TEMPDIR}/repo/${LS_REPO}
-                git checkout -f main
+                git checkout -f alpine319
                 cd ${TEMPDIR}/docker-${CONTAINER_NAME}
                 mkdir -p ${TEMPDIR}/repo/${LS_REPO}/.github/workflows
                 mkdir -p ${TEMPDIR}/repo/${LS_REPO}/.github/ISSUE_TEMPLATE
@@ -342,8 +358,8 @@ pipeline {
                 fi
                 git add readme-vars.yml ${TEMPLATED_FILES}
                 git commit -m 'Bot Updating Templated Files'
-                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
-                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git main
+                git pull https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
+                git push https://LinuxServer-CI:${GITHUB_TOKEN}@github.com/${LS_USER}/${LS_REPO}.git alpine319
                 echo "true" > /tmp/${COMMIT_SHA}-${BUILD_NUMBER}
                 echo "Updating templates and exiting build, new one will trigger based on commit"
                 rm -Rf ${TEMPDIR}
@@ -410,7 +426,7 @@ pipeline {
     // Exit the build if the Templated files were just updated
     stage('Template-exit') {
       when {
-        branch "main"
+        branch "alpine319"
         environment name: 'CHANGE_ID', value: ''
         environment name: 'FILES_UPDATED', value: 'true'
         expression {
@@ -423,10 +439,10 @@ pipeline {
         }
       }
     }
-    // If this is a main build check the S6 service file perms
+    // If this is a alpine319 build check the S6 service file perms
     stage("Check S6 Service file Permissions"){
       when {
-        branch "main"
+        branch "alpine319"
         environment name: 'CHANGE_ID', value: ''
         environment name: 'EXIT_STATUS', value: ''
       }
@@ -444,10 +460,10 @@ pipeline {
       }
     }
     /* #######################
-           GitLab Mirroring
+       GitLab Mirroring and Quay.io Repo Visibility
        ####################### */
-    // Ping into Gitlab to mirror this repo and have a registry endpoint
-    stage("GitLab Mirror"){
+    // Ping into Gitlab to mirror this repo and have a registry endpoint & mark this repo on Quay.io as public
+    stage("GitLab Mirror and Quay.io Visibility"){
       when {
         environment name: 'EXIT_STATUS', value: ''
       }
@@ -463,6 +479,8 @@ pipeline {
             "visibility":"public"}' '''
         sh '''curl -H "Private-Token: ${GITLAB_TOKEN}" -X PUT "https://gitlab.com/api/v4/projects/Linuxserver.io%2F${LS_REPO}" \
           -d "mirror=true&import_url=https://github.com/linuxserver/${LS_REPO}.git" '''
+        sh '''curl -H "Content-Type: application/json" -H "Authorization: Bearer ${QUAYIO_API_TOKEN}" -X POST "https://quay.io/api/v1/repository${QUAYIMAGE/quay.io/}/changevisibility" \
+          -d '{"visibility":"public"}' ||: '''
       } 
     }
     /* ###############
@@ -556,7 +574,7 @@ pipeline {
               --provenance=false --sbom=false \
               --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
             sh "docker tag ${IMAGE}:arm64v8-${META_TAG} ghcr.io/linuxserver/lsiodev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER}"
-            retry(5) {
+            retry_backoff(5,5) {
               sh "docker push ghcr.io/linuxserver/lsiodev-buildcache:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER}"
             }
             sh '''#! /bin/bash
@@ -633,7 +651,7 @@ pipeline {
             passwordVariable: 'QUAYPASS'
           ]
         ]) {
-          retry(5) {
+          retry_backoff(5,5) {
             sh '''#! /bin/bash
                   set -e
                   echo $DOCKERHUB_TOKEN | docker login -u linuxserverci --password-stdin
@@ -651,7 +669,7 @@ pipeline {
                     docker push ${PUSHIMAGE}:${META_TAG}
                     docker push ${PUSHIMAGE}:${EXT_RELEASE_TAG}
                     if [ -n "${SEMVER}" ]; then
-                     docker push ${PUSHIMAGE}:${SEMVER}
+                      docker push ${PUSHIMAGE}:${SEMVER}
                     fi
                   done
                '''
@@ -674,7 +692,7 @@ pipeline {
             passwordVariable: 'QUAYPASS'
           ]
         ]) {
-          retry(5) {
+          retry_backoff(5,5) {
             sh '''#! /bin/bash
                   set -e
                   echo $DOCKERHUB_TOKEN | docker login -u linuxserverci --password-stdin
@@ -723,7 +741,7 @@ pipeline {
     // If this is a public release tag it in the LS Github
     stage('Github-Tag-Push-Release') {
       when {
-        branch "main"
+        branch "alpine319"
         expression {
           env.LS_RELEASE != env.EXT_RELEASE_CLEAN + '-ls' + env.LS_TAG_NUMBER
         }
@@ -735,17 +753,17 @@ pipeline {
         sh '''curl -H "Authorization: token ${GITHUB_TOKEN}" -X POST https://api.github.com/repos/${LS_USER}/${LS_REPO}/git/tags \
         -d '{"tag":"'${META_TAG}'",\
              "object": "'${COMMIT_SHA}'",\
-             "message": "Tagging Release '${EXT_RELEASE_CLEAN}'-ls'${LS_TAG_NUMBER}' to main",\
+             "message": "Tagging Release '${EXT_RELEASE_CLEAN}'-ls'${LS_TAG_NUMBER}' to alpine319",\
              "type": "commit",\
-             "tagger": {"name": "LinuxServer Jenkins","email": "jenkins@linuxserver.io","date": "'${GITHUB_DATE}'"}}' '''
+             "tagger": {"name": "LinuxServer-CI","email": "ci@linuxserver.io","date": "'${GITHUB_DATE}'"}}' '''
         echo "Pushing New release for Tag"
         sh '''#! /bin/bash
               echo "Data change at JSON endpoint ${JSON_URL}" > releasebody.json
               echo '{"tag_name":"'${META_TAG}'",\
-                     "target_commitish": "main",\
+                     "target_commitish": "alpine319",\
                      "name": "'${META_TAG}'",\
                      "body": "**LinuxServer Changes:**\\n\\n'${LS_RELEASE_NOTES}'\\n\\n**Remote Changes:**\\n\\n' > start
-              printf '","draft": false,"prerelease": false}' >> releasebody.json
+              printf '","draft": false,"prerelease": true}' >> releasebody.json
               paste -d'\\0' start releasebody.json > releasebody.json.done
               curl -H "Authorization: token ${GITHUB_TOKEN}" -X POST https://api.github.com/repos/${LS_USER}/${LS_REPO}/releases -d @releasebody.json.done'''
       }
@@ -753,14 +771,14 @@ pipeline {
     // Add protection to the release branch
     stage('Github-Release-Branch-Protection') {
       when {
-        branch "main"
+        branch "alpine319"
         environment name: 'CHANGE_ID', value: ''
         environment name: 'EXIT_STATUS', value: ''
       }
       steps {
-        echo "Setting up protection for release branch main"
+        echo "Setting up protection for release branch alpine319"
         sh '''#! /bin/bash
-          curl -H "Authorization: token ${GITHUB_TOKEN}" -X PUT https://api.github.com/repos/${LS_USER}/${LS_REPO}/branches/main/protection \
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -X PUT https://api.github.com/repos/${LS_USER}/${LS_REPO}/branches/alpine319/protection \
           -d $(jq -c .  << EOF
             {
               "required_status_checks": null,
@@ -869,6 +887,13 @@ EOF
      ###################### */
   post {
     always {
+      sh '''#!/bin/bash
+            rm -rf /config/.ssh/id_sign
+            rm -rf /config/.ssh/id_sign.pub
+            git config --global --unset gpg.format
+            git config --global --unset user.signingkey
+            git config --global --unset commit.gpgsign
+        '''
       script{
         if (env.EXIT_STATUS == "ABORTED"){
           sh 'echo "build aborted"'
@@ -897,4 +922,21 @@ EOF
       cleanWs()
     }
   }
+}
+
+def retry_backoff(int max_attempts, int power_base, Closure c) {
+  int n = 0
+  while (n < max_attempts) {
+    try {
+      c()
+      return
+    } catch (err) {
+      if ((n + 1) >= max_attempts) {
+        throw err
+      }
+      sleep(power_base ** n)
+      n++
+    }
+  }
+  return
 }

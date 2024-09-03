@@ -96,7 +96,7 @@ RUN \
     \( \
       -type d -a \( -name test -o -name tests \) \
     \) -exec rm -rf '{}' + && \
-  sed -i 's|pythoncompiled|usr/local|' /pythoncompiled/bin/pip /pythoncompiled/bin/pip* /pythoncompiled/bin/wheel && \
+  find /pythoncompiled/bin -type f -not \( -name 'python*' \) -exec sed -i 's|pythoncompiled|usr/local|' '{}' '+' && \
   echo "**** cleanup ****" && \
   apk del --purge \
     build-dependencies && \
