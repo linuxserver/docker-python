@@ -3,7 +3,7 @@
 # jenkins variables
 project_name: docker-python
 external_type: custom_json
-release_type: prerelease
+release_type: stable
 release_tag: alpine320
 ls_branch: alpine320
 skip_package_check: true
