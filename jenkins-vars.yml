@@ -2,7 +2,8 @@
 
 # jenkins variables
 project_name: docker-python
-external_type: custom_json
+external_type: na
+custom_version_command: "curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains(\"rc\") or contains(\"a\") or contains(\"b\") | not) | .name' | sed 's|^v||g' | sort -rV | head -1"
 release_type: stable
 release_tag: alpine320
 ls_branch: alpine320
@@ -10,8 +11,6 @@ skip_package_check: true
 unraid_template_sync: false
 unraid_template: false
 repo_vars:
-  - JSON_URL = 'https://endoflife.date/api/python.json'
-  - JSON_PATH = '.[0].latest'
   - BUILD_VERSION_ARG = 'PYTHON_VERSION'
   - LS_USER = 'linuxserver'
   - LS_REPO = 'docker-python'
