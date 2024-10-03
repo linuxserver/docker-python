@@ -19,8 +19,6 @@ pipeline {
     DOCKERHUB_TOKEN=credentials('docker-hub-ci-pat')
     QUAYIO_API_TOKEN=credentials('quayio-repo-api-token')
     GIT_SIGNING_KEY=credentials('484fbca6-9a4f-455e-b9e3-97ac98785f5f')
-    JSON_URL = 'https://endoflife.date/api/python.json'
-    JSON_PATH = '.[0].latest'
     BUILD_VERSION_ARG = 'PYTHON_VERSION'
     LS_USER = 'linuxserver'
     LS_REPO = 'docker-python'
@@ -128,16 +126,16 @@ pipeline {
     /* ########################
        External Release Tagging
        ######################## */
-    // If this is a custom json endpoint parse the return to get external tag
-    stage("Set ENV custom_json"){
-     steps{
-       script{
-         env.EXT_RELEASE = sh(
-           script: '''curl -s ${JSON_URL} | jq -r ". | ${JSON_PATH}" ''',
-           returnStdout: true).trim()
-         env.RELEASE_LINK = env.JSON_URL
-       }
-     }
+    // If this is a custom command to determine version use that command
+    stage("Set tag custom bash"){
+      steps{
+        script{
+          env.EXT_RELEASE = sh(
+            script: ''' curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains("rc") or contains("a") or contains("b") | not) | .name' | sed 's|^v||g' | sort -rV | head -1 ''',
+            returnStdout: true).trim()
+            env.RELEASE_LINK = 'custom_command'
+        }
+      }
     }
     // Sanitize the release tag and strip illegal docker or github characters
     stage("Sanitize tag"){
@@ -768,7 +766,7 @@ pipeline {
              "tagger": {"name": "LinuxServer-CI","email": "ci@linuxserver.io","date": "'${GITHUB_DATE}'"}}' '''
         echo "Pushing New release for Tag"
         sh '''#! /bin/bash
-              echo "Data change at JSON endpoint ${JSON_URL}" > releasebody.json
+              echo "Updating to ${EXT_RELEASE_CLEAN}" > releasebody.json
               echo '{"tag_name":"'${META_TAG}'",\
                      "target_commitish": "alpine320",\
                      "name": "'${META_TAG}'",\
