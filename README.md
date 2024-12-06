@@ -44,5 +44,6 @@ This image only contains the compiled python files for Alpine, and is meant to b
 
 ## Versions
 
+* **05.12.24:** - Release `alpine321` tag.
 * **07.06.24:** - Release `alpine320` tag.
 * **07.03.24:** - Initial release.
