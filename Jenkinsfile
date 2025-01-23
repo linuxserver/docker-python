@@ -512,7 +512,7 @@ pipeline {
           --label \"org.opencontainers.image.title=Python\" \
           --label \"org.opencontainers.image.description=python image by linuxserver.io\" \
           --no-cache --pull -t ${IMAGE}:${META_TAG} --platform=linux/amd64 \
-          --provenance=false --sbom=false --builder=container --load \
+          --provenance=true --sbom=true --builder=container --load \
           --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
         sh '''#! /bin/bash
               set -e
@@ -541,7 +541,9 @@ pipeline {
                       for i in "${CACHE[@]}"; do
                         docker push ${i}:amd64-${COMMIT_SHA}-${BUILD_NUMBER} &
                       done
-                      wait
+                      for p in $(jobs -p); do
+                        wait "$p" || { echo "job $p failed" >&2; exit 1; }
+                      done
                     fi
                 '''
           }
@@ -575,7 +577,7 @@ pipeline {
               --label \"org.opencontainers.image.title=Python\" \
               --label \"org.opencontainers.image.description=python image by linuxserver.io\" \
               --no-cache --pull -t ${IMAGE}:amd64-${META_TAG} --platform=linux/amd64 \
-              --provenance=false --sbom=false --builder=container --load \
+              --provenance=true --sbom=true --builder=container --load \
               --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
             sh '''#! /bin/bash
                   set -e
@@ -604,7 +606,9 @@ pipeline {
                           for i in "${CACHE[@]}"; do
                             docker push ${i}:amd64-${COMMIT_SHA}-${BUILD_NUMBER} &
                           done
-                          wait
+                          for p in $(jobs -p); do
+                            wait "$p" || { echo "job $p failed" >&2; exit 1; }
+                          done
                         fi
                     '''
               }
@@ -632,7 +636,7 @@ pipeline {
               --label \"org.opencontainers.image.title=Python\" \
               --label \"org.opencontainers.image.description=python image by linuxserver.io\" \
               --no-cache --pull -f Dockerfile.aarch64 -t ${IMAGE}:arm64v8-${META_TAG} --platform=linux/arm64 \
-              --provenance=false --sbom=false --builder=container --load \
+              --provenance=true --sbom=true --builder=container --load \
               --build-arg ${BUILD_VERSION_ARG}=${EXT_RELEASE} --build-arg VERSION=\"${VERSION_TAG}\" --build-arg BUILD_DATE=${GITHUB_DATE} ."
             sh '''#! /bin/bash
                   set -e
@@ -661,7 +665,9 @@ pipeline {
                           for i in "${CACHE[@]}"; do
                             docker push ${i}:arm64v8-${COMMIT_SHA}-${BUILD_NUMBER} &
                           done
-                          wait
+                          for p in $(jobs -p); do
+                            wait "$p" || { echo "job $p failed" >&2; exit 1; }
+                          done
                         fi
                     '''
               }
