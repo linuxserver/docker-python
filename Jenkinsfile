@@ -70,7 +70,9 @@ pipeline {
                   fi
                 done
               fi
-              docker system prune -f --volumes || : '''
+              docker system prune -f --volumes || :
+              docker image prune -af || :
+           '''
         script{
           env.EXIT_STATUS = ''
           env.LS_RELEASE = sh(
@@ -141,7 +143,7 @@ pipeline {
       steps{
         script{
           env.EXT_RELEASE = sh(
-            script: ''' curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains("rc") or contains("a") or contains("b") | not) | .name' | sed 's|^v||g' | sort -rV | head -1 ''',
+            script: ''' echo 3.13.1 ''',
             returnStdout: true).trim()
             env.RELEASE_LINK = 'custom_command'
         }
@@ -687,7 +689,8 @@ pipeline {
                   if [[ -n "${containers}" ]]; then
                     docker stop ${containers}
                   fi
-                  docker system prune -af --volumes || :
+                  docker system prune -f --volumes || :
+                  docker image prune -af || :
                '''
           }
         }
@@ -1034,6 +1037,7 @@ EOF
               done
             fi
             docker system prune -f --volumes || :
+            docker image prune -af || :
          '''
       cleanWs()
     }
