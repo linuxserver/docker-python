@@ -26,7 +26,7 @@ jobs:
           echo "> [!NOTE]" >> $GITHUB_STEP_SUMMARY
           echo "> External trigger running off of alpine320 branch. To disable this trigger, add \`python_alpine320\` into the Github organizational variable \`SKIP_EXTERNAL_TRIGGER\`." >> $GITHUB_STEP_SUMMARY
           printf "\n## Retrieving external version\n\n" >> $GITHUB_STEP_SUMMARY
-          EXT_RELEASE=$(echo 3.13.1)
+          EXT_RELEASE=$(curl -u ${{ secrets.CR_USER }}:${{ secrets.CR_PAT }} -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains("rc") or contains("a") or contains("b") | not) | .name' | sed 's|^v||g' | sort -rV | head -1)
           echo "Type is \`custom_version_command\`" >> $GITHUB_STEP_SUMMARY
           if grep -q "^python_alpine320_${EXT_RELEASE}" <<< "${SKIP_EXTERNAL_TRIGGER}"; then
             echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
