@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/linuxserver/baseimage-alpine:3.21 as buildstage
+FROM ghcr.io/linuxserver/baseimage-alpine:3.22 as buildstage
 
 # set version label
 ARG PYTHON_VERSION
