@@ -3,7 +3,7 @@
 # jenkins variables
 project_name: docker-python
 external_type: na
-custom_version_command: "curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains(\"rc\") or contains(\"a\") or contains(\"b\") | not) | .name' | sed 's|^v||g' | sort -rV | head -1"
+custom_version_command: "echo 3.13.9"
 release_type: stable
 release_tag: alpine322
 ls_branch: alpine322
