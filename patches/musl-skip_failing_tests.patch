@@ -1,0 +1,39 @@
+From c4355fe059aad95122cae9747ec9e34b934a2a3a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20=C4=8Cerm=C3=A1k?= <sairon@sairon.cz>
+Date: Fri, 11 Apr 2025 13:20:37 +0200
+Subject: [PATCH] Skip test_re tests failing on musl
+
+---
+ Lib/test/test_re.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Lib/test/test_re.py b/Lib/test/test_re.py
+index 813cb4a..0b5877a 100644
+--- a/Lib/test/test_re.py
++++ b/Lib/test/test_re.py
+@@ -1,6 +1,6 @@
+ from test.support import (gc_collect, bigmemtest, _2G,
+                           cpython_only, captured_stdout,
+-                          check_disallow_instantiation, is_emscripten, is_wasi,
++                          check_disallow_instantiation, is_emscripten, is_wasi, linked_to_musl,
+                           warnings_helper, SHORT_TIMEOUT, CPUStopwatch, requires_resource)
+ import locale
+ import re
+@@ -2177,7 +2177,7 @@ class ReTests(unittest.TestCase):
+         self.assertEqual(re.fullmatch('[a-c]+', 'ABC', re.I).span(), (0, 3))
+ 
+     @unittest.skipIf(
+-        is_emscripten or is_wasi,
++        is_emscripten or is_wasi or linked_to_musl,
+         "musl libc issue on Emscripten/WASI, bpo-46390"
+     )
+     def test_locale_caching(self):
+@@ -2217,7 +2217,7 @@ class ReTests(unittest.TestCase):
+         self.assertIsNone(re.match(b'(?Li)\xe5', b'\xc5'))
+ 
+     @unittest.skipIf(
+-        is_emscripten or is_wasi,
++        is_emscripten or is_wasi or linked_to_musl,
+         "musl libc issue on Emscripten/WASI, bpo-46390"
+     )
+     def test_locale_compiled(self):

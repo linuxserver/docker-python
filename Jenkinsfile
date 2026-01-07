@@ -147,7 +147,7 @@ pipeline {
       steps{
         script{
           env.EXT_RELEASE = sh(
-            script: ''' curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains("rc") or contains("a") or contains("b") | not) | .name' | sed 's|^v||g' | sort -rV | head -1 ''',
+            script: ''' echo 3.13.11 ''',
             returnStdout: true).trim()
             env.RELEASE_LINK = 'custom_command'
         }
