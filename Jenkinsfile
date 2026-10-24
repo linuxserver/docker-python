@@ -206,7 +206,7 @@ pipeline {
       steps{
         script{
           env.EXT_RELEASE = sh(
-            script: ''' echo $(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|.*-(alpine.*)-.*|\1|' | sed 's|\.||')-$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker-base/refs/heads/master/python/$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|([0-9\.]+)-alpine.*|\1|')/Dockerfile | grep 'ARG PYTHON_VERSION=' | sed 's|.*PYTHON_VERSION=||') ''',
+            script: ''' echo $(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|.*-(alpine.*)-.*|\\1|' | sed 's|\\.||')-$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker-base/refs/heads/master/python/$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|([0-9\\.]+)-alpine.*|\\1|')/Dockerfile | grep 'ARG PYTHON_VERSION=' | sed 's|.*PYTHON_VERSION=||') ''',
             returnStdout: true).trim()
             env.RELEASE_LINK = 'custom_command'
         }
