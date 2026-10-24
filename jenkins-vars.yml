@@ -3,15 +3,15 @@
 # jenkins variables
 project_name: docker-python
 external_type: na
-custom_version_command: "curl -sX GET https://api.github.com/repos/python/cpython/tags | jq -r '.[] | select(.name | contains(\"rc\") or contains(\"a\") or contains(\"b\") | not) | .name' | sed 's|^v||g' | sort -rV | head -1"
-release_type: stable
-release_tag: alpine324
-ls_branch: alpine324
+custom_version_command: "echo $(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|.*-(alpine.*)-.*|\\\\1|' | sed 's|\\\\.||')-$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker-base/refs/heads/master/python/$(curl -fsL https://raw.githubusercontent.com/home-assistant/docker/refs/heads/master/Dockerfile | grep 'ARG BUILD_FROM=' | cut -d: -f2 | sed -E 's|([0-9\\\\.]+)-alpine.*|\\\\1|')/Dockerfile | grep 'ARG PYTHON_VERSION=' | sed 's|.*PYTHON_VERSION=||')"
+release_type: prerelease
+release_tag: ha
+ls_branch: ha
 skip_package_check: true
 unraid_template_sync: false
 unraid_template: false
 repo_vars:
-  - BUILD_VERSION_ARG = 'PYTHON_VERSION'
+  - BUILD_VERSION_ARG = 'OS_PYTHON_VERSION'
   - LS_USER = 'linuxserver'
   - LS_REPO = 'docker-python'
   - CONTAINER_NAME='python'
